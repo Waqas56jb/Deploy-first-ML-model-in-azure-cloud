@@ -2,6 +2,10 @@ import pandas as pd
 import numpy as np
 from sklearn.linear_model import LinearRegression
 import pickle
+import os
+
+# Create model directory if it doesn't exist
+os.makedirs('model', exist_ok=True)
 
 # Hardcoded dataset
 data = {
@@ -24,4 +28,4 @@ model.fit(X, y)
 with open('model/house_price_model.pkl', 'wb') as f:
     pickle.dump(model, f)
 
-print("Model trained and saved as house_price_model.pkl")
+print("Model trained and saved as model/house_price_model.pkl")

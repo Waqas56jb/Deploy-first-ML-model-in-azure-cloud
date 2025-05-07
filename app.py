@@ -1,12 +1,14 @@
 from flask import Flask, render_template, request, jsonify
-import requests
-import json
+import pickle
+import pandas as pd
+import os
 
 app = Flask(__name__)
 
-# Azure ML endpoint details (replace with your actual endpoint and key)
-AZURE_ENDPOINT = "YOUR_SCORING_URI"  # e.g., http://<guid>.eastus.inference.ml.azure.com/score
-AZURE_API_KEY = "YOUR_PRIMARY_KEY"   # Primary Key from Azure ML endpoint
+# Load the trained model
+model_path = os.path.join('model', 'house_price_model.pkl')
+with open(model_path, 'rb') as f:
+    model = pickle.load(f)
 
 @app.route('/')
 def index():
@@ -20,30 +22,15 @@ def predict():
         bedrooms = int(request.form['bedrooms'])
         age = int(request.form['age'])
 
-        # Prepare data for Azure ML endpoint
-        data = {
-            "size_sqft": size,
-            "bedrooms": bedrooms,
-            "age_years": age
-        }
+        # Prepare data for prediction
+        input_data = pd.DataFrame([[size, bedrooms, age]], columns=['size_sqft', 'bedrooms', 'age_years'])
+        
+        # Make prediction
+        prediction = model.predict(input_data)[0]
 
-        # Send request to Azure ML endpoint
-        headers = {
-            'Content-Type': 'application/json',
-            'Authorization': f'Bearer {AZURE_API_KEY}'
-        }
-        response = requests.post(AZURE_ENDPOINT, json=data, headers=headers)
-        response.raise_for_status()  # Raise exception for bad status codes
-
-        # Parse response
-        result = response.json()
-        if 'predicted_price' in result:
-            return jsonify({'predicted_price': result['predicted_price']})
-        else:
-            return jsonify({'error': result.get('error', 'Unknown error')}), 400
-
+        return jsonify({'predicted_price': float(prediction)})
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': str(e)}), 400
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
